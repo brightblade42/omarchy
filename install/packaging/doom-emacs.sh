@@ -45,37 +45,12 @@ if ! grep -q 'doom' ~/.bashrc; then
 fi
 "
 
-# Export emacs to host system for native desktop integration
-echo "Exporting Emacs to host system..."
-if distrobox-export --app emacs --container "$AUR_CONTAINER" 2>/dev/null; then
-    echo "  ✓ Emacs exported successfully"
-else
-    echo "  Warning: Failed to export emacs app (emacs may need to be launched manually first)"
-fi
-
-# Export doom command to host system
+# Export doom command to host system for easy access
+echo "Exporting doom command to host system..."
 if distrobox-export --bin ~/.config/emacs/bin/doom --container "$AUR_CONTAINER" 2>/dev/null; then
     echo "  ✓ doom command exported successfully"
 else
-    echo "  Warning: Failed to export doom command"
-fi
-
-# Create desktop entry for better integration (if not auto-created)
-mkdir -p ~/.local/share/applications
-if [ ! -f ~/.local/share/applications/emacs.desktop ]; then
-cat > ~/.local/share/applications/doom-emacs.desktop << 'EOF'
-[Desktop Entry]
-Name=Doom Emacs
-Comment=An Emacs framework for the stubborn martian hacker
-GenericName=Text Editor
-Exec=distrobox-enter -n arch-aur -- emacs %F
-Icon=emacs
-Type=Application
-Terminal=false
-Categories=Development;TextEditor;
-StartupWMClass=Emacs
-MimeType=text/english;text/plain;text/x-makefile;text/x-c++hdr;text/x-c++src;text/x-chdr;text/x-csrc;text/x-java;text/x-moc;text/x-pascal;text/x-tcl;text/x-tex;application/x-shellscript;text/x-c;text/x-c++;
-EOF
+    echo "  Warning: Failed to export doom command (you can run 'distrobox enter arch-aur -- doom' instead)"
 fi
 
 echo "✓ Doom Emacs installation complete!"
