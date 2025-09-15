@@ -25,7 +25,6 @@ sudo dnf install -y \
   pipewire-jack-audio-connection-kit \
   podman \
   podman-compose \
-  power-profiles-daemon \
   system-config-printer \
   wireplumber \
   polkit \
