@@ -17,7 +17,21 @@ sudo dnf install -y flatpak
 flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
 # Install container infrastructure for AUR access (Podman-based)
-sudo dnf install -y podman podman-compose distrobox
+echo "Installing container infrastructure (podman, distrobox)..."
+if ! sudo dnf install -y podman podman-compose distrobox; then
+    echo "ERROR: Failed to install container infrastructure"
+    echo "Please run manually: sudo dnf install -y podman podman-compose distrobox"
+    exit 1
+fi
+
+# Verify distrobox is available
+if ! command -v distrobox >/dev/null 2>&1; then
+    echo "ERROR: distrobox not found after installation"
+    echo "Try: hash -r && which distrobox"
+    exit 1
+fi
+
+echo "✓ Container infrastructure installed successfully"
 
 # Enable and start podman socket for better integration
 systemctl --user enable --now podman.socket
