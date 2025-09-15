@@ -64,7 +64,15 @@ case "$1" in
         shift
         for package in "$@"; do
             echo "Installing $package from AUR..."
-            if distrobox enter "$AUR_CONTAINER" -- yay -S --noconfirm "$package"; then
+
+            # Handle common conflicts (git versions vs stable)
+            case "$package" in
+                fastfetch)
+                    distrobox enter "$AUR_CONTAINER" -- pacman -Rdd --noconfirm fastfetch-git 2>/dev/null || true
+                    ;;
+            esac
+
+            if distrobox enter "$AUR_CONTAINER" -- yay -S --noconfirm --removemake --cleanafter --overwrite "*" "$package"; then
                 # Auto-export if package has desktop entry
                 if distrobox-export --app "$package" 2>/dev/null; then
                     echo "✓ $package installed and exported as native app"
