@@ -79,6 +79,10 @@ case "$1" in
                 hyprsunset)
                     distrobox enter "$AUR_CONTAINER" -- yay -Rns --noconfirm hyprsunset-git 2>/dev/null || true
                     ;;
+                localsend)
+                    # localsend depends on rustup, which conflicts with rust package
+                    distrobox enter "$AUR_CONTAINER" -- yay -Rns --noconfirm rust 2>/dev/null || true
+                    ;;
             esac
 
             if distrobox enter "$AUR_CONTAINER" -- yay -S --noconfirm --removemake --cleanafter --overwrite "*" "$package"; then
