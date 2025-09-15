@@ -17,7 +17,6 @@ sudo dnf install -y \
   gvfs-mtp \
   gvfs-smb \
   hyprland \
-  inetutils \
   nautilus \
   NetworkManager-wifi \
   pipewire \
