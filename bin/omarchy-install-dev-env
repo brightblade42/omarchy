@@ -6,7 +6,8 @@ if [[ -z "$1" ]]; then
 fi
 
 install_php() {
-  sudo pacman -S php composer php-sqlite xdebug --noconfirm
+  # FEDARCHY: Install PHP via DNF instead of pacman
+  sudo dnf install -y php php-cli composer php-pdo php-mysqlnd php-sqlite3 php-xdebug php-bcmath php-intl php-openssl
 
   # Install Path for Composer
   if [[ ":$PATH:" != *":$HOME/.config/composer/vendor/bin:"* ]]; then
@@ -17,26 +18,17 @@ install_php() {
     echo "Composer global bin directory already in PATH."
   fi
 
-  # Enable some extensions
-  local php_ini_path="/etc/php/php.ini"
-  local extensions_to_enable=(
-    "bcmath"
-    "intl"
-    "iconv"
-    "openssl"
-    "pdo_sqlite"
-    "pdo_mysql"
-  )
+  # Enable Xdebug (Fedora path)
+  local xdebug_ini="/etc/php.d/15-xdebug.ini"
+  if [ -f "$xdebug_ini" ]; then
+    # Enable Xdebug for development
+    sudo sed -i \
+      -e 's/^;zend_extension=xdebug/zend_extension=xdebug/' \
+      -e '/^zend_extension=xdebug/a xdebug.mode=develop,debug' \
+      "$xdebug_ini"
+  fi
 
-  # Enable Xdebug
-  sudo sed -i \
-    -e 's/^;zend_extension=xdebug.so/zend_extension=xdebug.so/' \
-    -e 's/^;xdebug.mode=debug/xdebug.mode=debug/' \
-    /etc/php/conf.d/xdebug.ini
-
-  for ext in "${extensions_to_enable[@]}"; do
-    sudo sed -i "s/^;extension=${ext}/extension=${ext}/" "$php_ini_path"
-  done
+  echo "PHP development environment configured for Fedora"
 }
 
 install_node() {
