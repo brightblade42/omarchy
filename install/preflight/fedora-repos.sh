@@ -70,6 +70,15 @@ case "$1" in
                 fastfetch)
                     distrobox enter "$AUR_CONTAINER" -- yay -Rns --noconfirm fastfetch-git 2>/dev/null || true
                     ;;
+                hyprpicker)
+                    distrobox enter "$AUR_CONTAINER" -- yay -Rns --noconfirm hyprpicker-git 2>/dev/null || true
+                    ;;
+                hyprshot)
+                    distrobox enter "$AUR_CONTAINER" -- yay -Rns --noconfirm hyprshot-git 2>/dev/null || true
+                    ;;
+                hyprsunset)
+                    distrobox enter "$AUR_CONTAINER" -- yay -Rns --noconfirm hyprsunset-git 2>/dev/null || true
+                    ;;
             esac
 
             if distrobox enter "$AUR_CONTAINER" -- yay -S --noconfirm --removemake --cleanafter --overwrite "*" "$package"; then

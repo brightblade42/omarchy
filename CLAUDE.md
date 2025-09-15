@@ -132,6 +132,7 @@ setup_fedora_repos() {
 7. **Cleanup**: Removed `install/login/` directory and related Plymouth utilities for simplified installation
 8. **Hardware**: Always use proprietary NVIDIA drivers - open-source drivers are experimental and unreliable
 9. **Hardware Cleanup**: Removed unnecessary/harmful scripts - bluetooth.sh (auto-enabled), network.sh (conflicts with NetworkManager)
+10. **Package Versions**: Use stable versions (matching original Omarchy) - Future: add `--stable` flag for user choice between stable/git versions
 
 ### Testing Requirements
 - Test on clean Fedora 42 installation
