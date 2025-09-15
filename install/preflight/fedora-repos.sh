@@ -3,9 +3,9 @@
 # FEDARCHY: Setup Fedora repositories and container infrastructure
 # Replaces pacman.sh for Fedora-based system
 
-# Install essential development tools
-sudo dnf groupinstall -y "Development Tools" "Development Libraries"
-sudo dnf install -y gcc make cmake git
+# Install only essential system tools for Fedora host
+# (AUR compilation happens inside distrobox, not on host)
+sudo dnf install -y git
 
 # Enable RPM Fusion repositories for additional packages
 sudo dnf install -y \
