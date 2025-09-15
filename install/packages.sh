@@ -9,17 +9,24 @@ sudo dnf install -y \
   avahi \
   bash-completion \
   cups \
+  cups-browsed \
   cups-filters \
+  cups-pdf \
   fontconfig \
   gnome-keyring \
+  gvfs-mtp \
+  gvfs-smb \
   hyprland \
   inetutils \
+  nautilus \
   NetworkManager-wifi \
   pipewire \
   pipewire-pulseaudio \
   pipewire-jack-audio-connection-kit \
   podman \
   podman-compose \
+  power-profiles-daemon \
+  system-config-printer \
   wireplumber \
   polkit \
   lxpolkit \
@@ -139,25 +146,18 @@ aur install \
 # System utilities
 aur install \
   blueberry \
-  cups-browsed \
-  cups-pdf \
   ffmpegthumbnailer \
-  gvfs-mtp \
-  gvfs-smb \
   kvantum-qt5 \
   libqalculate \
   localsend \
   luarocks \
   mariadb-libs \
-  nautilus \
   nss-mdns \
   omarchy-chromium \
   postgresql-libs \
-  power-profiles-daemon \
   python-gobject \
   python-terminaltexteffects \
   sushi \
-  system-config-printer \
   typora \
   tzupdate \
   ufw \
