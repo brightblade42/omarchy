@@ -104,7 +104,7 @@ case "$1" in
             echo "Removing $package..."
             distrobox enter "$AUR_CONTAINER" -- yay -Rs --noconfirm "$package"
             # Clean up exported apps
-            ~/.local/bin/distrobox-export --delete --app "$package" 2>/dev/null || true
+            distrobox-export --delete --app "$package" 2>/dev/null || true
         done
         ;;
     update)

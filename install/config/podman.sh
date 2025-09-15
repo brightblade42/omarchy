@@ -5,11 +5,11 @@
 
 # Configure Podman for better performance and logging
 mkdir -p ~/.config/containers
-tee ~/.config/containers/storage.conf >/dev/null <<'EOF'
+tee ~/.config/containers/storage.conf >/dev/null <<EOF
 [storage]
 driver = "overlay"
-runroot = "/run/user/1000/containers"
-graphroot = "/home/ryanmartin/.local/share/containers/storage"
+runroot = "/run/user/\$(id -u)/containers"
+graphroot = "$HOME/.local/share/containers/storage"
 
 [storage.options]
 # Optimize for performance
