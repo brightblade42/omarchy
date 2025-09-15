@@ -29,9 +29,14 @@ distrobox enter "$AUR_CONTAINER" -- yay -S --noconfirm --needed \
 echo "Cloning Doom Emacs in container..."
 distrobox enter "$AUR_CONTAINER" -- git clone --depth 1 https://github.com/doomemacs/doomemacs ~/.config/emacs
 
-# Install Doom Emacs inside container
+# Install Doom Emacs inside container (non-interactive)
 echo "Installing Doom Emacs (this may take a few minutes)..."
-distrobox enter "$AUR_CONTAINER" -- ~/.config/emacs/bin/doom install --no-fonts
+# Set environment variables for non-interactive installation
+distrobox enter "$AUR_CONTAINER" -- bash -c "
+export DOOM_AUTOINSTALL=yes
+export CI=true
+~/.config/emacs/bin/doom install --no-env
+"
 
 # Add Doom bin to PATH inside container
 distrobox enter "$AUR_CONTAINER" -- bash -c "
