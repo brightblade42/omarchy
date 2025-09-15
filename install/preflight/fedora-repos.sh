@@ -68,7 +68,7 @@ case "$1" in
             # Handle common conflicts (git versions vs stable)
             case "$package" in
                 fastfetch)
-                    distrobox enter "$AUR_CONTAINER" -- pacman -Rdd --noconfirm fastfetch-git 2>/dev/null || true
+                    distrobox enter "$AUR_CONTAINER" -- yay -Rns --noconfirm fastfetch-git 2>/dev/null || true
                     ;;
             esac
 
