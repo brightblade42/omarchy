@@ -47,10 +47,18 @@ fi
 
 # Export emacs to host system for native desktop integration
 echo "Exporting Emacs to host system..."
-distrobox-export --app emacs --container "$AUR_CONTAINER"
+if distrobox-export --app emacs --container "$AUR_CONTAINER" 2>/dev/null; then
+    echo "  ✓ Emacs exported successfully"
+else
+    echo "  Warning: Failed to export emacs app (emacs may need to be launched manually first)"
+fi
 
 # Export doom command to host system
-distrobox-export --bin ~/.config/emacs/bin/doom --container "$AUR_CONTAINER"
+if distrobox-export --bin ~/.config/emacs/bin/doom --container "$AUR_CONTAINER" 2>/dev/null; then
+    echo "  ✓ doom command exported successfully"
+else
+    echo "  Warning: Failed to export doom command"
+fi
 
 # Create desktop entry for better integration (if not auto-created)
 mkdir -p ~/.local/share/applications
