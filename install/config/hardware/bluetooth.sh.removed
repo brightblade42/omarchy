@@ -1,0 +1,6 @@
+# FEDARCHY: Removing bluetooth.sh - Bluetooth enabled by default on Fedora
+# Original content (for reference):
+#!/bin/bash
+
+# Turn on bluetooth by default
+chrootable_systemctl_enable bluetooth.service

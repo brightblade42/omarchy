@@ -1,0 +1,80 @@
+#!/bin/bash
+
+# FEDARCHY: Main Fedarchy command interface
+# Provides shortcuts and system status information
+
+case "$1" in
+  status)
+    echo -e "\e[32mFedarchy System Status\e[0m"
+    echo "=========================="
+    echo "Fedora Version: $(cat /etc/fedora-release)"
+    echo "AUR Container: $(distrobox list | grep arch-aur >/dev/null && echo "✓ Running" || echo "✗ Not found")"
+    echo "Package Sources:"
+    echo "  - DNF packages: $(dnf list --installed | wc -l) installed"
+    echo "  - AUR packages: $(distrobox enter arch-aur -- pacman -Q 2>/dev/null | wc -l || echo "0") installed"
+    echo "  - Flatpak apps: $(flatpak list --app 2>/dev/null | wc -l || echo "0") installed"
+    ;;
+
+  update)
+    echo "Running comprehensive Fedarchy system update..."
+    omarchy-update-system-pkgs
+    ;;
+
+  container)
+    case "$2" in
+      start)
+        echo "Starting AUR container..."
+        distrobox enter arch-aur -- echo "Container is ready"
+        ;;
+      stop)
+        echo "Stopping AUR container..."
+        distrobox stop arch-aur
+        ;;
+      restart)
+        echo "Restarting AUR container..."
+        distrobox stop arch-aur 2>/dev/null || true
+        sleep 2
+        distrobox enter arch-aur -- echo "Container restarted"
+        ;;
+      *)
+        echo "Usage: fedarchy container {start|stop|restart}"
+        ;;
+    esac
+    ;;
+
+  install)
+    shift
+    aur install "$@"
+    ;;
+
+  remove)
+    shift
+    omarchy-pkg-remove
+    ;;
+
+  search)
+    shift
+    aur search "$@"
+    ;;
+
+  info)
+    echo -e "\e[32mFedarchy - Fedora-based Omarchy\e[0m"
+    echo "=================================="
+    echo "A beautiful, modern development environment based on Hyprland"
+    echo "Running on stable Fedora with containerized AUR access"
+    echo ""
+    echo "Commands:"
+    echo "  fedarchy status     - Show system status"
+    echo "  fedarchy update     - Update all packages"
+    echo "  fedarchy install    - Install packages"
+    echo "  fedarchy remove     - Remove packages"
+    echo "  fedarchy search     - Search packages"
+    echo "  fedarchy container  - Manage AUR container"
+    echo ""
+    echo "All original omarchy-* commands are still available!"
+    ;;
+
+  *)
+    fedarchy info
+    ;;
+esac

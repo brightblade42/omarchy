@@ -1,8 +1,33 @@
 #!/bin/bash
 
+# FEDARCHY: Enhanced package addition with multi-source support
+
 for pkg in "$@"; do
-  if ! pacman -Q "$pkg" &>/dev/null; then
-    sudo pacman -S --noconfirm "$pkg" || exit 1
+  # Check if package is already installed from any source
+  if dnf list installed "$pkg" &>/dev/null || \
+     distrobox enter arch-aur -- pacman -Q "$pkg" &>/dev/null 2>&1 || \
+     flatpak list --app | grep -q "$pkg"; then
+    echo "Package $pkg is already installed"
+    continue
+  fi
+
+  # Try to install using AUR first (for Omarchy compatibility)
+  echo "Installing $pkg via AUR..."
+  if aur install "$pkg"; then
+    echo "✓ $pkg installed successfully via AUR"
+  else
+    echo "AUR installation failed, trying DNF..."
+    if sudo dnf install -y "$pkg"; then
+      echo "✓ $pkg installed successfully via DNF"
+    else
+      echo "DNF installation failed, trying Flatpak..."
+      if flatpak install -y flathub "$pkg"; then
+        echo "✓ $pkg installed successfully via Flatpak"
+      else
+        echo "✗ Failed to install $pkg from all sources"
+        exit 1
+      fi
+    fi
   fi
 done
 

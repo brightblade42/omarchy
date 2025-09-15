@@ -1,8 +1,13 @@
 #!/bin/bash
 
-echo "Adding multilib repository for 32-bit compatibility"
-sudo sed -i '/^#\s*\[multilib\]/,/^#\s*Include/ s/^#\s*//' /etc/pacman.conf
+# FEDARCHY: Steam installation for Fedora
 
-echo "Now pick dependencies matching your graphics card"
-sudo pacman -Syu --noconfirm steam
+echo "Installing Steam from RPM Fusion repositories"
+echo "Note: Steam is available via DNF from RPM Fusion (already configured)"
+
+# Install Steam and required 32-bit libraries
+sudo dnf install -y steam
+sudo dnf install -y mesa-dri-drivers.i686 mesa-libGL.i686
+
+echo "Steam installation complete!"
 setsid gtk-launch steam >/dev/null 2>&1 &

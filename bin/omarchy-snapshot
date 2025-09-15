@@ -17,7 +17,7 @@ create)
   DESC="$(omarchy-version)"
 
   echo -e "\e[32mCreate system snapshot\e[0m"
-  
+
   # Get existing snapper config names from CSV output
   mapfile -t CONFIGS < <(sudo snapper --csvout list-configs | awk -F, 'NR>1 {print $1}')
 
@@ -27,6 +27,9 @@ create)
   echo
   ;;
 restore)
-  sudo limine-snapper-restore
+  echo -e "\e[33mSnapshot restoration available via snapper directly\e[0m"
+  echo "Use: sudo snapper -c <config> undochange <snapshot1>..<snapshot2>"
+  echo "Or:  sudo snapper list to see available snapshots"
+  echo "FEDARCHY: Removed limine-snapper integration for simplicity"
   ;;
 esac

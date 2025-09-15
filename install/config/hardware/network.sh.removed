@@ -1,3 +1,5 @@
+# FEDARCHY: Removing network.sh - Conflicts with NetworkManager on Fedora
+# Original content would enable iwd which conflicts with NetworkManager
 #!/bin/bash
 
 # Ensure iwd service will be started

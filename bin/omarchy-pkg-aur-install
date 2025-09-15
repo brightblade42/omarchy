@@ -1,8 +1,11 @@
 #!/bin/bash
 
+# FEDARCHY: Enhanced AUR installer with auto-export functionality
+# Installs AUR packages via distrobox and automatically exports them
+
 fzf_args=(
   --multi
-  --preview 'yay -Sii {1}'
+  --preview 'distrobox enter arch-aur -- yay -Sii {1}'
   --preview-label='alt-p: toggle description, alt-j/k: scroll, tab: multi-select, F11: maximize'
   --preview-label-pos='bottom'
   --preview-window 'down:65%:wrap'
@@ -12,11 +15,28 @@ fzf_args=(
   --color 'pointer:green,marker:green'
 )
 
-pkg_names=$(yay -Slqa | fzf "${fzf_args[@]}")
+# Get AUR package list from container
+pkg_names=$(distrobox enter arch-aur -- yay -Slqa | fzf "${fzf_args[@]}")
 
 if [[ -n "$pkg_names" ]]; then
-  # Convert newline-separated selections to space-separated for yay
-  echo "$pkg_names" | tr '\n' ' ' | xargs yay -S --noconfirm
-  sudo updatedb
+  # Install and export each package
+  while IFS= read -r package; do
+    [[ -z "$package" ]] && continue
+
+    echo "Installing $package from AUR..."
+    if distrobox enter arch-aur -- yay -S --noconfirm "$package"; then
+      # Auto-export if package has desktop entry
+      if distrobox-export --app "$package" 2>/dev/null; then
+        echo "✓ $package installed and exported as native app"
+      else
+        echo "✓ $package installed (no desktop entry to export)"
+      fi
+    else
+      echo "✗ Failed to install $package"
+    fi
+  done <<< "$pkg_names"
+
+  # Update locate database
+  sudo updatedb 2>/dev/null || true
   omarchy-show-done
 fi

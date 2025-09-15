@@ -1,8 +1,11 @@
 #!/bin/bash
 
+# FEDARCHY: Enhanced package installer with multi-source support
+# Supports DNF, AUR, and Flatpak with intelligent source selection
+
 fzf_args=(
   --multi
-  --preview 'pacman -Sii {1}'
+  --preview 'omarchy-pkg-preview {1}'
   --preview-label='alt-p: toggle description, alt-j/k: scroll, tab: multi-select, F11: maximize'
   --preview-label-pos='bottom'
   --preview-window 'down:65%:wrap'
@@ -12,10 +15,95 @@ fzf_args=(
   --color 'pointer:green,marker:green'
 )
 
-pkg_names=$(pacman -Slq | fzf "${fzf_args[@]}")
+# Create combined package list from all sources
+create_package_list() {
+  echo "Building package list from multiple sources..."
+
+  # AUR packages (primary source)
+  {
+    echo "# AUR Packages (Primary)"
+    distrobox enter arch-aur -- yay -Slq 2>/dev/null | sed 's/^/aur:/'
+  } > /tmp/fedarchy-packages.txt
+
+  # DNF packages (system integration)
+  {
+    echo "# DNF Packages (System)"
+    dnf list available --quiet 2>/dev/null | awk 'NR>1 {print $1}' | cut -d. -f1 | sed 's/^/dnf:/'
+  } >> /tmp/fedarchy-packages.txt
+
+  # Flatpak packages (fallback)
+  {
+    echo "# Flatpak Packages (Fallback)"
+    flatpak remote-ls flathub --app --columns=application 2>/dev/null | sed 's/^/flatpak:/'
+  } >> /tmp/fedarchy-packages.txt
+}
+
+# Package preview function
+create_preview_script() {
+  cat > /tmp/omarchy-pkg-preview << 'EOF'
+#!/bin/bash
+package="$1"
+source="${package%%:*}"
+name="${package#*:}"
+
+case "$source" in
+  aur)
+    distrobox enter arch-aur -- yay -Sii "$name" 2>/dev/null || echo "AUR package: $name"
+    ;;
+  dnf)
+    dnf info "$name" 2>/dev/null || echo "DNF package: $name"
+    ;;
+  flatpak)
+    flatpak info "$name" 2>/dev/null || echo "Flatpak: $name"
+    ;;
+  *)
+    echo "Unknown source: $package"
+    ;;
+esac
+EOF
+  chmod +x /tmp/omarchy-pkg-preview
+  sudo cp /tmp/omarchy-pkg-preview /usr/local/bin/omarchy-pkg-preview 2>/dev/null || cp /tmp/omarchy-pkg-preview ~/.local/bin/omarchy-pkg-preview
+}
+
+# Install packages based on source
+install_packages() {
+  local packages=("$@")
+
+  for package in "${packages[@]}"; do
+    source="${package%%:*}"
+    name="${package#*:}"
+
+    echo "Installing $name via $source..."
+
+    case "$source" in
+      aur)
+        aur install "$name"
+        ;;
+      dnf)
+        sudo dnf install -y "$name"
+        ;;
+      flatpak)
+        flatpak install -y flathub "$name"
+        ;;
+      *)
+        echo "Unknown package source: $source"
+        ;;
+    esac
+  done
+}
+
+# Main execution
+create_preview_script
+create_package_list
+
+pkg_names=$(cat /tmp/fedarchy-packages.txt | grep -v '^#' | fzf "${fzf_args[@]}")
 
 if [[ -n "$pkg_names" ]]; then
-  # Convert newline-separated selections to space-separated for yay
-  echo "$pkg_names" | tr '\n' ' ' | xargs sudo pacman -S --noconfirm
+  # Convert newline-separated selections to array
+  readarray -t selected_packages <<< "$pkg_names"
+  install_packages "${selected_packages[@]}"
   omarchy-show-done
 fi
+
+# Cleanup
+rm -f /tmp/fedarchy-packages.txt /tmp/omarchy-pkg-preview

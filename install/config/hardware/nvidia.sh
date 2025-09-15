@@ -1,87 +1,118 @@
 #!/bin/bash
 
 # ==============================================================================
-# Hyprland NVIDIA Setup Script for Arch Linux
+# Hyprland NVIDIA Setup Script for Fedora Linux (FEDARCHY)
 # ==============================================================================
 # This script automates the installation and configuration of NVIDIA drivers
-# for use with Hyprland on Arch Linux, following the official Hyprland wiki.
+# for use with Hyprland on Fedora Linux, using RPM Fusion repositories.
 #
-# Author: https://github.com/Kn0ax
+# IMPORTANT: Uses proprietary NVIDIA drivers for maximum stability and
+# compatibility. Open-source drivers are experimental and may cause issues.
+#
+# Converted from Arch version for Fedarchy project
 #
 # ==============================================================================
 
 # --- GPU Detection ---
 if [ -n "$(lspci | grep -i 'nvidia')" ]; then
+  echo "NVIDIA GPU detected, configuring drivers..."
+
   # --- Driver Selection ---
-  # Turing (16xx, 20xx), Ampere (30xx), Ada (40xx), and newer recommend the open-source kernel modules
-  if echo "$(lspci | grep -i 'nvidia')" | grep -q -E "RTX [2-9][0-9]|GTX 16"; then
-    NVIDIA_DRIVER_PACKAGE="nvidia-open-dkms"
-  else
-    NVIDIA_DRIVER_PACKAGE="nvidia-dkms"
+  # Always use proprietary NVIDIA drivers for maximum stability and compatibility
+  # The open-source drivers are still experimental and may have issues
+  NVIDIA_DRIVER_PACKAGE="akmod-nvidia"
+  echo "Using proprietary NVIDIA kernel modules for maximum stability"
+
+  # Check which kernel is installed and ensure appropriate headers
+  KERNEL_HEADERS="kernel-devel kernel-headers" # Default Fedora kernel
+  if rpm -q kernel-rt &>/dev/null; then
+    KERNEL_HEADERS="kernel-rt-devel kernel-rt-headers"
+    echo "Real-time kernel detected"
   fi
 
-  # Check which kernel is installed and set appropriate headers package
-  KERNEL_HEADERS="linux-headers" # Default
-  if pacman -Q linux-zen &>/dev/null; then
-    KERNEL_HEADERS="linux-zen-headers"
-  elif pacman -Q linux-lts &>/dev/null; then
-    KERNEL_HEADERS="linux-lts-headers"
-  elif pacman -Q linux-hardened &>/dev/null; then
-    KERNEL_HEADERS="linux-hardened-headers"
+  # Ensure RPM Fusion is enabled (should already be done by fedora-repos.sh)
+  if ! dnf repolist enabled | grep -q rpmfusion-nonfree; then
+    echo "Enabling RPM Fusion repositories..."
+    sudo dnf install -y \
+        https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm \
+        https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
   fi
 
-  # Enable multilib repository for 32-bit libraries
-  if ! grep -q "^\[multilib\]" /etc/pacman.conf; then
-    sudo sed -i '/^#\s*\[multilib\]/,/^#\s*Include/ s/^#\s*//' /etc/pacman.conf
-  fi
+  # Update system packages
+  sudo dnf update -y
 
-  # force package database refresh
-  sudo pacman -Syu --noconfirm
-
-  # Install packages
+  # Install NVIDIA packages
   PACKAGES_TO_INSTALL=(
     "${KERNEL_HEADERS}"
     "${NVIDIA_DRIVER_PACKAGE}"
-    "nvidia-utils"
-    "lib32-nvidia-utils"
+    "xorg-x11-drv-nvidia-cuda"
+    "nvidia-vaapi-driver"  # For VA-API hardware acceleration
+    "libva-nvidia-driver"
     "egl-wayland"
-    "libva-nvidia-driver" # For VA-API hardware acceleration
-    "qt5-wayland"
-    "qt6-wayland"
+    "qt5-qtwayland"
+    "qt6-qtwayland"
   )
 
-  sudo pacman -S --needed --noconfirm "${PACKAGES_TO_INSTALL[@]}"
+  echo "Installing NVIDIA packages: ${PACKAGES_TO_INSTALL[*]}"
+  sudo dnf install -y "${PACKAGES_TO_INSTALL[@]}"
 
   # Configure modprobe for early KMS
+  echo "Configuring NVIDIA kernel module options..."
   echo "options nvidia_drm modeset=1" | sudo tee /etc/modprobe.d/nvidia.conf >/dev/null
 
-  # Configure mkinitcpio for early loading
-  MKINITCPIO_CONF="/etc/mkinitcpio.conf"
+  # Configure dracut for early loading (Fedora uses dracut instead of mkinitcpio)
+  DRACUT_CONF="/etc/dracut.conf.d/nvidia.conf"
 
-  # Define modules
-  NVIDIA_MODULES="nvidia nvidia_modeset nvidia_uvm nvidia_drm"
+  echo "Configuring dracut for early NVIDIA module loading..."
+  cat > /tmp/nvidia-dracut.conf << 'EOF'
+# NVIDIA driver modules for early loading
+add_drivers+=" nvidia nvidia_modeset nvidia_uvm nvidia_drm "
+# Force early KMS
+kernel_cmdline+=" rd.driver.pre=nvidia-drm "
+EOF
 
-  # Create backup
-  sudo cp "$MKINITCPIO_CONF" "${MKINITCPIO_CONF}.backup"
+  sudo cp /tmp/nvidia-dracut.conf "$DRACUT_CONF"
 
-  # Remove any old nvidia modules to prevent duplicates
-  sudo sed -i -E 's/ nvidia_drm//g; s/ nvidia_uvm//g; s/ nvidia_modeset//g; s/ nvidia//g;' "$MKINITCPIO_CONF"
-  # Add the new modules at the start of the MODULES array
-  sudo sed -i -E "s/^(MODULES=\\()/\\1${NVIDIA_MODULES} /" "$MKINITCPIO_CONF"
-  # Clean up potential double spaces
-  sudo sed -i -E 's/  +/ /g' "$MKINITCPIO_CONF"
+  # Rebuild initramfs
+  echo "Rebuilding initramfs..."
+  sudo dracut --force
 
-  sudo mkinitcpio -P
-
-  # Add NVIDIA environment variables to hyprland.conf
+  # Add NVIDIA environment variables to Hyprland config
   HYPRLAND_CONF="$HOME/.config/hypr/hyprland.conf"
   if [ -f "$HYPRLAND_CONF" ]; then
+    echo "Adding NVIDIA environment variables to Hyprland config..."
     cat >>"$HYPRLAND_CONF" <<'EOF'
 
-# NVIDIA environment variables
+# NVIDIA environment variables for Hyprland
 env = NVD_BACKEND,direct
 env = LIBVA_DRIVER_NAME,nvidia
 env = __GLX_VENDOR_LIBRARY_NAME,nvidia
+env = GBM_BACKEND,nvidia-drm
+env = __GL_GSYNC_ALLOWED,1
+env = __GL_VRR_ALLOWED,1
+env = WLR_DRM_NO_ATOMIC,1
 EOF
   fi
+
+  # Configure Xorg if needed (though Hyprland uses Wayland)
+  if [ ! -f /etc/X11/xorg.conf.d/20-nvidia.conf ]; then
+    echo "Creating Xorg NVIDIA configuration..."
+    sudo mkdir -p /etc/X11/xorg.conf.d/
+    cat | sudo tee /etc/X11/xorg.conf.d/20-nvidia.conf > /dev/null << 'EOF'
+Section "Device"
+    Identifier "NVIDIA Card"
+    Driver "nvidia"
+    VendorName "NVIDIA Corporation"
+    Option "NoLogo" "true"
+    Option "UseEDID" "false"
+    Option "UseDisplayDevice" "none"
+EndSection
+EOF
+  fi
+
+  echo "NVIDIA configuration complete!"
+  echo "Please reboot for changes to take effect."
+
+else
+  echo "No NVIDIA GPU detected, skipping NVIDIA driver configuration."
 fi

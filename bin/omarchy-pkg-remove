@@ -1,8 +1,11 @@
 #!/bin/bash
 
+# FEDARCHY: Enhanced package removal with multi-source support
+# Removes packages from DNF, AUR, and Flatpak with cleanup
+
 fzf_args=(
   --multi
-  --preview 'yay -Qi {1}'
+  --preview 'omarchy-pkg-info {1}'
   --preview-label='alt-p: toggle description, alt-j/k: scroll, tab: multi-select, F11: maximize'
   --preview-label-pos='bottom'
   --preview-window 'down:65%:wrap'
@@ -12,10 +15,95 @@ fzf_args=(
   --color 'pointer:red,marker:red'
 )
 
-pkg_names=$(yay -Qqe | fzf "${fzf_args[@]}")
+# Create package info script
+create_info_script() {
+  cat > /tmp/omarchy-pkg-info << 'EOF'
+#!/bin/bash
+package="$1"
+source="${package%%:*}"
+name="${package#*:}"
+
+case "$source" in
+  aur)
+    distrobox enter arch-aur -- yay -Qi "$name" 2>/dev/null || echo "AUR package: $name (not installed)"
+    ;;
+  dnf)
+    dnf info installed "$name" 2>/dev/null || echo "DNF package: $name (not installed)"
+    ;;
+  flatpak)
+    flatpak info "$name" 2>/dev/null || echo "Flatpak: $name (not installed)"
+    ;;
+  *)
+    # Try to detect source automatically
+    if distrobox enter arch-aur -- yay -Qi "$package" >/dev/null 2>&1; then
+      echo "aur:$package"
+    elif dnf list installed "$package" >/dev/null 2>&1; then
+      echo "dnf:$package"
+    elif flatpak list --app | grep -q "$package"; then
+      echo "flatpak:$package"
+    else
+      echo "Package not found: $package"
+    fi
+    ;;
+esac
+EOF
+  chmod +x /tmp/omarchy-pkg-info
+  sudo cp /tmp/omarchy-pkg-info /usr/local/bin/omarchy-pkg-info 2>/dev/null || cp /tmp/omarchy-pkg-info ~/.local/bin/omarchy-pkg-info
+}
+
+# Get installed packages from all sources
+get_installed_packages() {
+  {
+    # AUR packages
+    distrobox enter arch-aur -- yay -Qqe 2>/dev/null | sed 's/^/aur:/'
+
+    # DNF packages (user-installed only)
+    dnf history userinstalled 2>/dev/null | tail -n +2 | sed 's/^/dnf:/'
+
+    # Flatpak packages
+    flatpak list --app --columns=application 2>/dev/null | sed 's/^/flatpak:/'
+  } | sort -u
+}
+
+# Remove packages based on source
+remove_packages() {
+  local packages=("$@")
+
+  for package in "${packages[@]}"; do
+    source="${package%%:*}"
+    name="${package#*:}"
+
+    echo "Removing $name from $source..."
+
+    case "$source" in
+      aur)
+        distrobox enter arch-aur -- yay -Rns --noconfirm "$name"
+        # Clean up exported apps
+        distrobox-export --delete --app "$name" 2>/dev/null || true
+        ;;
+      dnf)
+        sudo dnf remove -y "$name"
+        ;;
+      flatpak)
+        flatpak uninstall -y "$name"
+        ;;
+      *)
+        echo "Unknown package source: $source"
+        ;;
+    esac
+  done
+}
+
+# Main execution
+create_info_script
+
+pkg_names=$(get_installed_packages | fzf "${fzf_args[@]}")
 
 if [[ -n "$pkg_names" ]]; then
-  # Convert newline-separated selections to space-separated for yay
-  echo "$pkg_names" | tr '\n' ' ' | xargs sudo pacman -Rns --noconfirm
+  readarray -t selected_packages <<< "$pkg_names"
+  remove_packages "${selected_packages[@]}"
   omarchy-show-done
 fi
+
+# Cleanup
+rm -f /tmp/omarchy-pkg-info

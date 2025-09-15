@@ -1,4 +1,12 @@
 #!/bin/bash
 
-curl -sf --connect-timeout 30 --retry 3 --retry-delay 3 -A "omarchy-update" \
+# FEDARCHY: Check if AUR is accessible via distrobox container
+
+# First check if container exists and is running
+if ! distrobox list | grep -q "arch-aur"; then
+  exit 1
+fi
+
+# Check if container can access AUR
+distrobox enter arch-aur -- curl -sf --connect-timeout 30 --retry 3 --retry-delay 3 -A "fedarchy-update" \
   "https://aur.archlinux.org/rpc/?v=5&type=info&arg=base" >/dev/null

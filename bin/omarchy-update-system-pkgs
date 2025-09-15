@@ -1,31 +1,75 @@
 #!/bin/bash
 
-# Used in package emergencies if a bad package has been pushed and we can't revoke.
-# Requires manually installing the good package using sudo pacman -U <url>
+# FEDARCHY: Comprehensive system update for all package sources
+# Updates DNF, AUR, and Flatpak packages with cleanup
+
 ignored_packages=$(omarchy-pkg-ignored)
 
-echo -e "\e[32m\nUpdate system packages\e[0m"
-[[ -n $ignored_packages ]] && echo "sudo pacman -Syu --noconfirm --ignore \"$ignored_packages\""
-sudo pacman -Syu --noconfirm --ignore "$ignored_packages"
+echo -e "\e[32m\nUpdate DNF system packages\e[0m"
+if [[ -n $ignored_packages ]]; then
+  # Convert ignored packages to DNF exclude format
+  exclude_args=$(echo "$ignored_packages" | tr ' ' ',' | sed 's/^/--exclude=/')
+  echo "sudo dnf update -y $exclude_args"
+  sudo dnf update -y $exclude_args
+else
+  sudo dnf update -y
+fi
 
-# Update AUR packages if any are installed
-if pacman -Qem >/dev/null; then
+echo -e "\e[32m\nUpdate Flatpak packages\e[0m"
+flatpak update -y
+
+# Update AUR packages if container is accessible
+if distrobox list | grep -q "arch-aur"; then
   if omarchy-pkg-aur-accessible; then
     echo -e "\e[32m\nUpdate AUR packages\e[0m"
-    [[ -n $ignored_packages ]] && echo "yay -Sua --noconfirm  --ignore \"$ignored_packages\""
-    yay -Sua --noconfirm --ignore "$ignored_packages"
+    if [[ -n $ignored_packages ]]; then
+      echo "distrobox enter arch-aur -- yay -Sua --noconfirm --ignore \"$ignored_packages\""
+      distrobox enter arch-aur -- yay -Sua --noconfirm --ignore "$ignored_packages"
+    else
+      distrobox enter arch-aur -- yay -Sua --noconfirm
+    fi
     echo
   else
-    echo -e "\e[31m\nAUR is unavailable (so skipping updates)\e[0m"
+    echo -e "\e[31m\nAUR container is unavailable (skipping AUR updates)\e[0m"
     echo
+  fi
+else
+  echo -e "\e[33m\nAUR container not found (skipping AUR updates)\e[0m"
+  echo
+fi
+
+# Clean up orphaned DNF packages
+echo -e "\e[32m\nRemove orphaned DNF packages\e[0m"
+orphans=$(dnf list --installed | awk '/\.x86_64/ {print $1}' | cut -d. -f1 | xargs -I {} sh -c 'dnf repoquery --whatrequires {} >/dev/null 2>&1 || echo {}' 2>/dev/null)
+if [[ -n "$orphans" ]]; then
+  echo "Found orphaned packages: $orphans"
+  echo "$orphans" | xargs sudo dnf remove -y 2>/dev/null || true
+else
+  echo "No orphaned packages found"
+fi
+
+# Clean up AUR orphans if container exists
+if distrobox list | grep -q "arch-aur" && omarchy-pkg-aur-accessible; then
+  echo -e "\e[32m\nRemove orphaned AUR packages\e[0m"
+  aur_orphans=$(distrobox enter arch-aur -- pacman -Qtdq 2>/dev/null || true)
+  if [[ -n "$aur_orphans" ]]; then
+    echo "Found AUR orphans: $aur_orphans"
+    for pkg in $aur_orphans; do
+      distrobox enter arch-aur -- pacman -Rs --noconfirm "$pkg" 2>/dev/null || true
+      # Clean up any exported apps
+      distrobox-export --delete --app "$pkg" 2>/dev/null || true
+    done
+  else
+    echo "No AUR orphans found"
   fi
 fi
 
-orphans=$(pacman -Qtdq)
-if [[ -n $orphans ]]; then
-  echo -e "\e[32m\nRemove orphan system packages\e[0m"
-  for pkg in $orphans; do
-    sudo pacman -Rs --noconfirm "$pkg" || true
-  done
-  echo
+# Clean package caches
+echo -e "\e[32m\nClean package caches\e[0m"
+sudo dnf clean all
+flatpak uninstall --unused -y 2>/dev/null || true
+if distrobox list | grep -q "arch-aur"; then
+  distrobox enter arch-aur -- yay -Sc --noconfirm 2>/dev/null || true
 fi
+
+echo -e "\e[32m\nSystem update complete!\e[0m"

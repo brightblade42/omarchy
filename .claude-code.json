@@ -1,9 +1,0 @@
-{
-  "name": "Fedarchy (Omarchy Migration)",
-  "description": "Migrating Omarchy to Fedora with Distrobox innovations",
-  "context_files": [
-    "FEDARCHY_KNOWLEDGE.md",
-    "FEDARCHY_EXAMPLES.sh"
-  ],
-  "migration_strategy": "Preserve Omarchy UX, enhance with Fedora stability and container security"
-}

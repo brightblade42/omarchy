@@ -1,130 +1,178 @@
 #!/bin/bash
 
-sudo pacman -S --noconfirm --needed \
+# FEDARCHY: AUR-first package installation strategy
+# Maintains Omarchy compatibility by using AUR packages via distrobox
+
+# DNF packages - Essential system integration + core window manager
+echo "Installing essential system packages via DNF..."
+sudo dnf install -y \
+  avahi \
+  bash-completion \
+  cups \
+  cups-filters \
+  fontconfig \
+  gnome-keyring \
+  hyprland \
+  inetutils \
+  NetworkManager-wifi \
+  pipewire \
+  pipewire-pulseaudio \
+  pipewire-jack-audio-connection-kit \
+  podman \
+  podman-compose \
+  wireplumber \
+  polkit \
+  lxpolkit \
+  qt5-qtwayland \
+  systemd \
+  unzip \
+  wireless-regdb \
+  xmlstarlet
+
+# Flatpak fallbacks for packages not available via AUR
+echo "Installing Flatpak applications..."
+flatpak install -y flathub \
+  org.gnome.Calculator \
+  org.gnome.Evince \
+  org.libreoffice.LibreOffice \
+  org.kde.kdenlive \
+  com.obsproject.Studio \
+  md.obsidian.Obsidian \
+  com.github.PintaProject.Pinta \
+  org.signal.Signal \
+  com.spotify.Client \
+  org.gnome.FileRoller
+
+# AUR packages - PRIMARY source for Omarchy compatibility
+echo "Installing AUR packages with auto-export..."
+
+# Development tools
+aur install \
   1password-beta \
   1password-cli \
   asdcontrol-git \
-  alacritty \
-  avahi \
-  bash-completion \
-  bat \
-  blueberry \
-  brightnessctl \
-  btop \
+  github-cli \
   cargo \
   clang \
-  cups \
-  cups-browsed \
-  cups-filters \
-  cups-pdf \
-  docker \
-  docker-buildx \
-  docker-compose \
+  gcc14 \
+  llvm \
+  mise \
+  nvim \
+  python-poetry-core \
+  tree-sitter-cli \
+  zed \
+  emacs \
+  fossil \
+  sqlite
+
+# Terminal utilities
+aur install \
+  alacritty \
+  bat \
+  btop \
   dust \
-  evince \
   eza \
   fastfetch \
-  fcitx5 \
-  fcitx5-gtk \
-  fcitx5-qt \
   fd \
-  ffmpegthumbnailer \
-  fontconfig \
   fzf \
-  gcc14 \
-  github-cli \
-  gnome-calculator \
-  gnome-keyring \
-  gnome-themes-extra \
   gum \
-  gvfs-mtp \
-  gvfs-smb \
+  jq \
+  lazydocker \
+  lazygit \
+  less \
+  plocate \
+  ripgrep \
+  starship \
+  tldr \
+  wezterm \
+  zellij \
+  zoxide
+
+# Hyprland utilities (core hyprland installed via DNF)
+# These utilities benefit from latest AUR versions
+aur install \
   hypridle \
-  hyprland \
   hyprland-qtutils \
   hyprlock \
   hyprpicker \
   hyprshot \
   hyprsunset \
-  imagemagick \
-  impala \
-  imv \
-  inetutils \
-  iwd \
-  jq \
-  kdenlive \
-  kvantum-qt5 \
-  lazydocker \
-  lazygit \
-  less \
-  libqalculate \
-  libreoffice \
-  llvm \
-  localsend \
-  luarocks \
   mako \
-  man \
-  mariadb-libs \
-  mise \
+  waybar \
+  walker-bin \
+  uwsm
+
+# Media and graphics
+aur install \
+  brightnessctl \
+  imagemagick \
+  imv \
   mpv \
-  nautilus \
+  pamixer \
+  playerctl \
+  satty \
+  slurp \
+  swaybg \
+  swayosd \
+  wf-recorder \
+  wl-clip-persist \
+  wl-clipboard \
+  wl-screenrec
+
+# Input methods and internationalization
+aur install \
+  fcitx5 \
+  fcitx5-gtk \
+  fcitx5-qt
+
+# Fonts
+aur install \
   noto-fonts \
   noto-fonts-cjk \
   noto-fonts-emoji \
   noto-fonts-extra \
-  nss-mdns \
-  nvim \
-  obs-studio \
-  obsidian \
-  omarchy-chromium \
-  pamixer \
-  pinta \
-  playerctl \
-  plocate \
-  plymouth \
-  polkit-gnome \
-  postgresql-libs \
-  power-profiles-daemon \
-  python-gobject \
-  python-poetry-core \
-  python-terminaltexteffects \
-  qt5-wayland \
-  ripgrep \
-  satty \
-  signal-desktop \
-  slurp \
-  spotify \
-  starship \
-  sushi \
-  swaybg \
-  swayosd \
-  system-config-printer \
-  tldr \
-  tree-sitter-cli \
   ttf-cascadia-mono-nerd \
   ttf-ia-writer \
   ttf-jetbrains-mono-nerd \
+  woff2-font-awesome
+
+# System utilities
+aur install \
+  blueberry \
+  cups-browsed \
+  cups-pdf \
+  ffmpegthumbnailer \
+  gvfs-mtp \
+  gvfs-smb \
+  kvantum-qt5 \
+  libqalculate \
+  localsend \
+  luarocks \
+  mariadb-libs \
+  nautilus \
+  nss-mdns \
+  omarchy-chromium \
+  postgresql-libs \
+  power-profiles-daemon \
+  python-gobject \
+  python-terminaltexteffects \
+  sushi \
+  system-config-printer \
   typora \
   tzupdate \
   ufw \
-  ufw-docker \
-  unzip \
-  uwsm \
-  walker-bin \
-  waybar \
-  wf-recorder \
   whois \
-  wireless-regdb \
   wiremix \
-  wireplumber \
-  wl-clip-persist \
-  wl-clipboard \
-  wl-screenrec \
-  woff2-font-awesome \
   xdg-desktop-portal-gtk \
   xdg-desktop-portal-hyprland \
-  xmlstarlet \
   xournalpp \
-  yaru-icon-theme \
-  yay \
-  zoxide
+  yaru-icon-theme
+
+# Special packages
+aur install \
+  impala \
+  iwd \
+  yay
+
+echo "Package installation complete!"
+echo "AUR packages have been automatically exported as native applications"
