@@ -29,6 +29,7 @@ sudo dnf install -y \
   polkit \
   lxpolkit \
   qt5-qtwayland \
+  rsync \
   systemd \
   unzip \
   wireless-regdb \
@@ -47,7 +48,10 @@ sudo dnf install -y \
   uwsm \
   hyprpaper \
   hyprqt6engine \
-  hyprland-qtutils
+  hyprland-qtutils \
+  fcitx5 \
+  fcitx5-gtk \
+  fcitx5-qt
 
 # Flatpak fallbacks for packages not available via AUR
 echo "Installing Flatpak applications..."
@@ -131,10 +135,8 @@ aur install \
   wl-screenrec
 
 # Input methods and internationalization
-aur install \
-  fcitx5 \
-  fcitx5-gtk \
-  fcitx5-qt
+# FEDARCHY: fcitx5 moved to DNF (available in Fedora repos)
+echo "Input method framework installed via DNF"
 
 # Fonts
 aur install \
