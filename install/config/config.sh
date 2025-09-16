@@ -8,12 +8,12 @@ mkdir -p ~/.config
 # - Dangling symlinks (overwrites them)
 # - Existing files and directories
 # - Preserves permissions and timestamps
+echo "Deploying configuration files..."
 if command -v rsync >/dev/null 2>&1; then
-    echo "Deploying configuration files with rsync..."
-    rsync -av --delete-during ~/.local/share/omarchy/config/ ~/.config/
+    # Use rsync for proper symlink handling - NO DELETE FLAGS
+    rsync -av ~/.local/share/omarchy/config/ ~/.config/
 else
-    echo "Deploying configuration files with cp (removing dangling symlinks first)..."
-    # Remove dangling symlinks in ~/.config to prevent cp failures
+    # Fallback to cp with dangling symlink cleanup
     find ~/.config -type l ! -exec test -e {} \; -delete 2>/dev/null || true
     cp -R ~/.local/share/omarchy/config/* ~/.config/
 fi

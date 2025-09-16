@@ -8,6 +8,27 @@ OMARCHY_PATH="$HOME/.local/share/omarchy"
 OMARCHY_INSTALL="$OMARCHY_PATH/install"
 export PATH="$OMARCHY_PATH/bin:$PATH"
 
+# Check for existing installation
+if [[ -d "$OMARCHY_PATH" ]]; then
+    echo "🔍 Existing Omarchy installation detected!"
+    echo ""
+    read -p "Uninstall and reinstall fresh? (y/N): " reinstall
+
+    if [[ "$reinstall" == "y" || "$reinstall" == "Y" ]]; then
+        echo "🗑️  Running uninstall..."
+        if [[ -f "$(dirname "$0")/uninstall.sh" ]]; then
+            bash "$(dirname "$0")/uninstall.sh"
+            echo "🔄 Continuing with fresh installation..."
+        else
+            echo "❌ Uninstall script not found. Manual cleanup required."
+            exit 1
+        fi
+    else
+        echo "⚠️  Installing over existing installation..."
+    fi
+    echo ""
+fi
+
 # Preparation
 source $OMARCHY_INSTALL/preflight/show-env.sh
 source $OMARCHY_INSTALL/preflight/trap-errors.sh
