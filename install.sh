@@ -20,11 +20,12 @@ if [[ -d "$OMARCHY_PATH" ]]; then
 
     if [[ "$reinstall" == "y" || "$reinstall" == "Y" ]]; then
         echo "🗑️  Running uninstall..."
-        if [[ -f "$(dirname "$0")/uninstall.sh" ]]; then
-            bash "$(dirname "$0")/uninstall.sh"
+        if [[ -f "$SCRIPT_DIR/uninstall.sh" ]]; then
+            bash "$SCRIPT_DIR/uninstall.sh"
             echo "🔄 Continuing with fresh installation..."
         else
-            echo "❌ Uninstall script not found. Manual cleanup required."
+            echo "❌ Uninstall script not found at: $SCRIPT_DIR/uninstall.sh"
+            echo "❌ Manual cleanup required."
             exit 1
         fi
     else
