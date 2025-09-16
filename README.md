@@ -17,7 +17,7 @@ Read more about the original Omarchy at [omarchy.org](https://omarchy.org).
 Run this command on a fresh Fedora 42+ installation:
 
 ```bash
-bash <(curl -s https://raw.githubusercontent.com/YOUR_USERNAME/fedarchy/main/boot.sh)
+bash <(curl -s https://raw.githubusercontent.com/brightblade42/omarchy/master/boot.sh)
 ```
 
 ## What You Get

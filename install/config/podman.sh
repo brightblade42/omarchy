@@ -9,7 +9,7 @@ tee ~/.config/containers/storage.conf >/dev/null <<'EOF'
 [storage]
 driver = "overlay"
 runroot = "/run/user/1000/containers"
-graphroot = "/home/ryanmartin/.local/share/containers/storage"
+graphroot = "~/.local/share/containers/storage"
 
 [storage.options]
 # Optimize for performance
