@@ -12,6 +12,11 @@ sudo dnf install -y \
     https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm \
     https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
 
+# Enable COPR repository for Hyprland ecosystem packages
+echo "Enabling solopasha/hyprland COPR for Hyprland ecosystem..."
+sudo dnf install -y dnf-plugins-core
+sudo dnf copr enable -y solopasha/hyprland
+
 # Setup Flatpak for fallback packages
 sudo dnf install -y flatpak
 flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
@@ -84,15 +89,6 @@ case "$1" in
                 fastfetch)
                     distrobox enter "$AUR_CONTAINER" -- yay -Rns --noconfirm fastfetch-git 2>/dev/null || true
                     ;;
-                hyprpicker)
-                    distrobox enter "$AUR_CONTAINER" -- yay -Rns --noconfirm hyprpicker-git 2>/dev/null || true
-                    ;;
-                hyprshot)
-                    distrobox enter "$AUR_CONTAINER" -- yay -Rns --noconfirm hyprshot-git 2>/dev/null || true
-                    ;;
-                hyprsunset)
-                    distrobox enter "$AUR_CONTAINER" -- yay -Rns --noconfirm hyprsunset-git 2>/dev/null || true
-                    ;;
                 localsend)
                     # localsend depends on rustup, which conflicts with rust package
                     distrobox enter "$AUR_CONTAINER" -- yay -Rns --noconfirm rust 2>/dev/null || true
@@ -100,11 +96,44 @@ case "$1" in
             esac
 
             if distrobox enter "$AUR_CONTAINER" -- yay -S --noconfirm --removemake --cleanafter --overwrite "*" "$package"; then
-                # Auto-export if package has desktop entry
+                # Try to export as both GUI app and CLI binary
+                app_exported=false
+                bin_exported=false
+
+                # Export GUI app (requires desktop entry)
                 if distrobox-export --app "$package" 2>/dev/null; then
-                    echo "✓ $package installed and exported as native app"
+                    echo "✓ $package GUI app exported"
+                    app_exported=true
+                fi
+
+                # Export CLI binary (makes command available in host PATH)
+                if distrobox-export --bin "/usr/bin/$package" 2>/dev/null; then
+                    echo "✓ $package binary exported"
+                    bin_exported=true
+                fi
+
+                # Try common binary locations if standard location failed
+                if [ "$bin_exported" = false ]; then
+                    # Common binary name variations and locations
+                    for bin_path in "/usr/local/bin/$package" "/opt/$package/bin/$package" "/usr/bin/${package%-bin}" "/usr/bin/${package%-git}"; do
+                        # distrobox-export does its own validation, so just try to export
+                        if distrobox-export --bin "$bin_path" 2>/dev/null; then
+                            echo "✓ $package binary exported from $bin_path"
+                            bin_exported=true
+                            break
+                        fi
+                    done
+                fi
+
+                # Summary message
+                if [ "$app_exported" = true ] && [ "$bin_exported" = true ]; then
+                    echo "✓ $package installed with GUI and CLI access"
+                elif [ "$app_exported" = true ]; then
+                    echo "✓ $package installed as GUI application"
+                elif [ "$bin_exported" = true ]; then
+                    echo "✓ $package installed as CLI tool"
                 else
-                    echo "✓ $package installed (no desktop entry to export)"
+                    echo "✓ $package installed (use 'distrobox enter $AUR_CONTAINER -- $package' to run)"
                 fi
             else
                 echo "✗ Failed to install $package"
@@ -117,8 +146,10 @@ case "$1" in
         for package in "$@"; do
             echo "Removing $package..."
             distrobox enter "$AUR_CONTAINER" -- yay -Rs --noconfirm "$package"
-            # Clean up exported apps
+            # Clean up exported apps and binaries
             distrobox-export --delete --app "$package" 2>/dev/null || true
+            distrobox-export --delete --bin "$package" 2>/dev/null || true
+            distrobox-export --delete --bin "${package%-bin}" 2>/dev/null || true
         done
         ;;
     update)

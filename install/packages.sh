@@ -32,7 +32,22 @@ sudo dnf install -y \
   systemd \
   unzip \
   wireless-regdb \
-  xmlstarlet
+  xmlstarlet \
+  waybar \
+  mako \
+  xdg-desktop-portal-hyprland \
+  hyprcursor \
+  hyprlang \
+  hyprutils \
+  hypridle \
+  hyprlock \
+  hyprpicker \
+  hyprshot \
+  hyprsunset \
+  uwsm \
+  hyprpaper \
+  hyprqt6engine \
+  hyprland-qtutils
 
 # Flatpak fallbacks for packages not available via AUR
 echo "Installing Flatpak applications..."
@@ -93,19 +108,10 @@ aur install \
   zellij \
   zoxide
 
-# Hyprland utilities (core hyprland installed via DNF)
-# These utilities benefit from latest AUR versions
+# Hyprland utilities (ecosystem via COPR, critical components via DNF)
+# FEDARCHY: Complete Hyprland ecosystem moved to host via COPR for optimal integration
 aur install \
-  hypridle \
-  hyprland-qtutils \
-  hyprlock \
-  hyprpicker \
-  hyprshot \
-  hyprsunset \
-  mako \
-  waybar \
-  walker-bin \
-  uwsm
+  walker-bin
 
 # Media and graphics
 aur install \
@@ -162,7 +168,6 @@ aur install \
   whois \
   wiremix \
   xdg-desktop-portal-gtk \
-  xdg-desktop-portal-hyprland \
   xournalpp \
   yaru-icon-theme
 
