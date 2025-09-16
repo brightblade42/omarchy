@@ -51,7 +51,16 @@ sudo dnf install -y \
   hyprland-qtutils \
   fcitx5 \
   fcitx5-gtk \
-  fcitx5-qt
+  fcitx5-qt \
+  swaybg \
+  slurp \
+  grim \
+  wl-clipboard \
+  mpv \
+  ImageMagick \
+  google-noto-fonts-common \
+  google-noto-fonts-all \
+  xdg-desktop-portal-gtk
 
 # Flatpak fallbacks for packages not available via AUR
 echo "Installing Flatpak applications..."
@@ -118,20 +127,16 @@ aur install \
   walker-bin
 
 # Media and graphics
+# FEDARCHY: Moved to DNF - swaybg, slurp, grim, wl-clipboard, mpv, imagemagick
 aur install \
   brightnessctl \
-  imagemagick \
   imv \
-  mpv \
   pamixer \
   playerctl \
   satty \
-  slurp \
-  swaybg \
   swayosd \
   wf-recorder \
   wl-clip-persist \
-  wl-clipboard \
   wl-screenrec
 
 # Input methods and internationalization
@@ -139,11 +144,8 @@ aur install \
 echo "Input method framework installed via DNF"
 
 # Fonts
+# FEDARCHY: Moved to DNF - noto-fonts variants
 aur install \
-  noto-fonts \
-  noto-fonts-cjk \
-  noto-fonts-emoji \
-  noto-fonts-extra \
   ttf-cascadia-mono-nerd \
   ttf-ia-writer \
   ttf-jetbrains-mono-nerd \
@@ -169,7 +171,6 @@ aur install \
   ufw \
   whois \
   wiremix \
-  xdg-desktop-portal-gtk \
   xournalpp \
   yaru-icon-theme
 

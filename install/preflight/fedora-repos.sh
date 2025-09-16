@@ -100,30 +100,45 @@ case "$1" in
                 app_exported=false
                 bin_exported=false
 
-                # Export GUI app (requires desktop entry)
-                if distrobox-export --app "$package" 2>/dev/null; then
-                    echo "✓ $package GUI app exported"
-                    app_exported=true
-                fi
+                echo "Attempting to export $package..."
 
-                # Export CLI binary (makes command available in host PATH)
-                if distrobox-export --bin "/usr/bin/$package" 2>/dev/null; then
-                    echo "✓ $package binary exported"
-                    bin_exported=true
-                fi
-
-                # Try common binary locations if standard location failed
-                if [ "$bin_exported" = false ]; then
-                    # Common binary name variations and locations
-                    for bin_path in "/usr/local/bin/$package" "/opt/$package/bin/$package" "/usr/bin/${package%-bin}" "/usr/bin/${package%-git}"; do
-                        # distrobox-export does its own validation, so just try to export
-                        if distrobox-export --bin "$bin_path" 2>/dev/null; then
-                            echo "✓ $package binary exported from $bin_path"
-                            bin_exported=true
+                # Export GUI app - find actual desktop files first
+                desktop_files=$(distrobox enter "$AUR_CONTAINER" -- find /usr/share/applications/ -name "*$package*.desktop" -o -name "*${package%-bin}*.desktop" 2>/dev/null | head -3)
+                if [ -n "$desktop_files" ]; then
+                    echo "Found desktop files: $desktop_files"
+                    for desktop_file in $desktop_files; do
+                        app_name=$(basename "$desktop_file" .desktop)
+                        echo "Trying to export app: $app_name"
+                        if distrobox enter "$AUR_CONTAINER" -- distrobox-export --app "$app_name"; then
+                            echo "✓ $app_name GUI app exported"
+                            app_exported=true
                             break
+                        else
+                            echo "! Failed to export $app_name"
                         fi
                     done
+                else
+                    # Try package name directly as fallback
+                    echo "No desktop files found, trying package name..."
+                    if distrobox enter "$AUR_CONTAINER" -- distrobox-export --app "$package"; then
+                        echo "✓ $package GUI app exported"
+                        app_exported=true
+                    fi
                 fi
+
+                # Export CLI binary - check if binary exists first
+                for bin_path in "/usr/bin/$package" "/usr/local/bin/$package" "/usr/bin/${package%-bin}" "/usr/bin/${package%-git}"; do
+                    if distrobox enter "$AUR_CONTAINER" -- test -x "$bin_path" 2>/dev/null; then
+                        echo "Found binary at $bin_path, attempting export..."
+                        if distrobox enter "$AUR_CONTAINER" -- distrobox-export --bin "$bin_path"; then
+                            echo "✓ Binary exported: $(basename "$bin_path")"
+                            bin_exported=true
+                            break
+                        else
+                            echo "! Failed to export binary $bin_path"
+                        fi
+                    fi
+                done
 
                 # Summary message
                 if [ "$app_exported" = true ] && [ "$bin_exported" = true ]; then
@@ -133,7 +148,8 @@ case "$1" in
                 elif [ "$bin_exported" = true ]; then
                     echo "✓ $package installed as CLI tool"
                 else
-                    echo "✓ $package installed (use 'distrobox enter $AUR_CONTAINER -- $package' to run)"
+                    echo "✓ $package installed (no exportable apps/binaries found)"
+                    echo "  Use 'distrobox enter $AUR_CONTAINER -- $package' to run"
                 fi
             else
                 echo "✗ Failed to install $package"
@@ -147,9 +163,9 @@ case "$1" in
             echo "Removing $package..."
             distrobox enter "$AUR_CONTAINER" -- yay -Rs --noconfirm "$package"
             # Clean up exported apps and binaries
-            distrobox-export --delete --app "$package" 2>/dev/null || true
-            distrobox-export --delete --bin "$package" 2>/dev/null || true
-            distrobox-export --delete --bin "${package%-bin}" 2>/dev/null || true
+            distrobox enter "$AUR_CONTAINER" -- distrobox-export --delete --app "$package" 2>/dev/null || true
+            distrobox enter "$AUR_CONTAINER" -- distrobox-export --delete --bin "$package" 2>/dev/null || true
+            distrobox enter "$AUR_CONTAINER" -- distrobox-export --delete --bin "${package%-bin}" 2>/dev/null || true
         done
         ;;
     update)
@@ -160,9 +176,47 @@ case "$1" in
         shift
         distrobox enter "$AUR_CONTAINER" -- yay -Ss "$@"
         ;;
+    commit-container)
+        echo "Committing AUR container to backup image..."
+        if distrobox list | grep -q "$AUR_CONTAINER"; then
+            distrobox stop "$AUR_CONTAINER" 2>/dev/null || true
+            podman commit "distrobox_$AUR_CONTAINER" fedarchy-aur-backup:latest
+            distrobox start "$AUR_CONTAINER" 2>/dev/null || true
+            echo "✓ Container committed as 'fedarchy-aur-backup:latest'"
+            echo "Use 'aur restore-container' to restore from this backup"
+        else
+            echo "✗ AUR container not found"
+            exit 1
+        fi
+        ;;
+    restore-container)
+        echo "Restoring AUR container from backup image..."
+        if podman image exists fedarchy-aur-backup:latest; then
+            # Remove existing container if present
+            distrobox rm "$AUR_CONTAINER" --force 2>/dev/null || true
+
+            # Create from backup image
+            distrobox create --name "$AUR_CONTAINER" --image fedarchy-aur-backup:latest
+
+            echo "✓ Container restored from backup"
+            echo "Testing container..."
+            if distrobox enter "$AUR_CONTAINER" -- echo "Container working"; then
+                echo "✓ Container is functional"
+            else
+                echo "✗ Container may have issues"
+            fi
+        else
+            echo "✗ No backup image found (fedarchy-aur-backup:latest)"
+            echo "Create a backup first with 'aur commit-container'"
+            exit 1
+        fi
+        ;;
     *)
-        echo "Usage: aur {install|remove|update|search} [packages...]"
-        echo "Example: aur install walker-bin discord"
+        echo "Usage: aur {install|remove|update|search|commit-container|restore-container} [packages...]"
+        echo "Examples:"
+        echo "  aur install walker-bin discord"
+        echo "  aur commit-container    # Save current container state"
+        echo "  aur restore-container   # Restore from saved state"
         exit 1
         ;;
 esac
@@ -177,12 +231,45 @@ EOF
     fi
 }
 
+# Setup container auto-start service
+setup_container_autostart() {
+    echo "Setting up container auto-start on boot..."
+    mkdir -p ~/.config/systemd/user
+
+    cat > ~/.config/systemd/user/distrobox-arch-aur.service << 'EOF'
+[Unit]
+Description=Distrobox arch-aur container auto-start
+Documentation=https://github.com/89luca89/distrobox
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/distrobox enter arch-aur -- sleep infinity
+ExecStop=/usr/bin/distrobox stop arch-aur
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+EOF
+
+    # Enable and start the service
+    systemctl --user daemon-reload
+    systemctl --user enable distrobox-arch-aur.service
+    systemctl --user start distrobox-arch-aur.service
+
+    echo "✓ Container auto-start configured"
+}
+
 # Execute setup
 setup_aur_container
 create_aur_wrapper
+setup_container_autostart
 
 # Update system packages
 sudo dnf update -y
 
 echo "Fedora repository setup complete!"
 echo "AUR wrapper created: Use 'aur install package' for AUR packages"
+echo "Container will auto-start on boot"
