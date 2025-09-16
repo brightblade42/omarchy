@@ -47,12 +47,43 @@ setup_aur_container() {
 
     # Create Arch container if it doesn't exist
     if ! distrobox list | grep -q "arch-aur"; then
-        distrobox create --name arch-aur --image archlinux:latest
+        # Comprehensive cleanup before container creation
+        echo "Cleaning up any stale container artifacts..."
+
+        # Clean volumes and containers
+        podman volume prune -f 2>/dev/null || true
+        podman container prune -f 2>/dev/null || true
+
+        # Remove any distrobox-specific artifacts that might persist
+        rm -rf ~/.local/share/applications/distrobox-*.desktop 2>/dev/null || true
+        rm -rf ~/.config/systemd/user/distrobox-*.service 2>/dev/null || true
+
+        # Reload systemd to clear any stale service references
+        systemctl --user daemon-reload 2>/dev/null || true
+
+        # Create container with proper cleanup
+        echo "Creating container..."
+        if ! distrobox create --name arch-aur --image archlinux:latest --yes; then
+            echo "ERROR: Failed to create container. Trying with alternative approach..."
+            # Fallback: try with explicit volume cleanup and different flags
+            podman system prune -f 2>/dev/null || true
+            sleep 2
+            distrobox create --name arch-aur --image archlinux:latest --yes --additional-flags "--pull=always"
+        fi
+
+        # Wait for container to be fully ready
+        echo "Waiting for container to initialize..."
+        sleep 3
 
         # Initialize container and install yay
         distrobox enter arch-aur -- bash -c "
+            # Update system first
             sudo pacman -Syu --noconfirm
-            sudo pacman -S --noconfirm base-devel git
+
+            # Install git if not already present (base-devel should have most tools)
+            sudo pacman -S --needed --noconfirm git
+
+            # Install yay
             cd /tmp
             git clone https://aur.archlinux.org/yay.git
             cd yay

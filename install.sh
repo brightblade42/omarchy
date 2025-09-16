@@ -12,8 +12,9 @@ OMARCHY_INSTALL="$SCRIPT_DIR/install"
 OMARCHY_PATH="$HOME/.local/share/omarchy"
 export PATH="$OMARCHY_PATH/bin:$PATH"
 
-# Check for existing installation
-if [[ -d "$OMARCHY_PATH" ]]; then
+# Check for existing installation (not just git repo)
+# Look for signs of actual installation: systemd service or container
+if [[ -f "$HOME/.config/systemd/user/distrobox-arch-aur.service" ]] || distrobox list 2>/dev/null | grep -q "arch-aur"; then
     echo "🔍 Existing Omarchy installation detected!"
     echo ""
     read -p "Uninstall and reinstall fresh? (y/N): " reinstall
