@@ -45,10 +45,24 @@ echo ""
 echo "🧹 Cleaning up exports..."
 
 # Remove distrobox exported binaries (they contain distrobox commands)
-find "$HOME/.local/bin" -type f -exec grep -l "distrobox enter" {} \; 2>/dev/null | xargs rm -f 2>/dev/null || true
+echo "   Checking for exported binaries..."
+exported_bins=$(find "$HOME/.local/bin" -type f -exec grep -l "distrobox" {} \; 2>/dev/null || true)
+if [[ -n "$exported_bins" ]]; then
+    echo "$exported_bins" | xargs rm -f
+    echo "   ✅ Removed exported binaries"
+else
+    echo "   ℹ️  No exported binaries found"
+fi
 
 # Remove exported desktop applications (they contain distrobox commands)
-find "$HOME/.local/share/applications" -name "*.desktop" -exec grep -l "distrobox enter" {} \; 2>/dev/null | xargs rm -f 2>/dev/null || true
+echo "   Checking for exported applications..."
+exported_apps=$(find "$HOME/.local/share/applications" -name "*.desktop" -exec grep -l "distrobox" {} \; 2>/dev/null || true)
+if [[ -n "$exported_apps" ]]; then
+    echo "$exported_apps" | xargs rm -f
+    echo "   ✅ Removed exported applications"
+else
+    echo "   ℹ️  No exported applications found"
+fi
 
 # Remove aur wrapper
 rm -f "$HOME/.local/bin/aur"
