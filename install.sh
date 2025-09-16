@@ -4,8 +4,12 @@
 # Exit immediately if a command exits with a non-zero status
 set -eE
 
+# Script directory (current git repo)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+OMARCHY_INSTALL="$SCRIPT_DIR/install"
+
+# Installation target directory
 OMARCHY_PATH="$HOME/.local/share/omarchy"
-OMARCHY_INSTALL="$OMARCHY_PATH/install"
 export PATH="$OMARCHY_PATH/bin:$PATH"
 
 # Check for existing installation
