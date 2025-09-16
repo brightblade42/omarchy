@@ -76,12 +76,13 @@ setup_aur_container() {
         sleep 3
 
         # Initialize container and install yay
-        distrobox enter arch-aur -- bash -c "
+        echo "Initializing container and installing yay..."
+        if distrobox enter arch-aur -- bash -c "
             # Update system first
             sudo pacman -Syu --noconfirm
 
-            # Install git if not already present (base-devel should have most tools)
-            sudo pacman -S --needed --noconfirm git
+            # Install base-devel and git (required for building yay)
+            sudo pacman -S --needed --noconfirm base-devel git
 
             # Install yay
             cd /tmp
@@ -90,9 +91,17 @@ setup_aur_container() {
             makepkg -si --noconfirm
             cd ~
             rm -rf /tmp/yay
-        "
 
-        echo "AUR container setup complete!"
+            # Verify yay was installed correctly
+            which yay && yay --version
+        "; then
+            echo "✓ AUR container setup complete with yay installed!"
+        else
+            echo "✗ Failed to initialize container properly"
+            echo "Removing failed container..."
+            distrobox rm arch-aur --force 2>/dev/null || true
+            exit 1
+        fi
     else
         echo "AUR container already exists, checking if properly initialized..."
 
@@ -125,6 +134,31 @@ create_aur_wrapper() {
 # FEDARCHY: AUR wrapper with auto-export functionality
 
 AUR_CONTAINER="arch-aur"
+
+# Health check function
+check_container_health() {
+    # Check if container exists
+    if ! distrobox list | grep -q "$AUR_CONTAINER"; then
+        echo "Error: AUR container '$AUR_CONTAINER' not found!"
+        echo "Run the installer to set up the container."
+        exit 1
+    fi
+
+    # Check if yay is available
+    if ! distrobox enter "$AUR_CONTAINER" -- which yay >/dev/null 2>&1; then
+        echo "Error: yay not found in container - container may be corrupted"
+        echo "Try running: distrobox rm $AUR_CONTAINER --force"
+        echo "Then re-run the installer to recreate the container."
+        exit 1
+    fi
+}
+
+# Run health check for operations that need yay
+case "$1" in
+    install|remove|update)
+        check_container_health
+        ;;
+esac
 
 case "$1" in
     install)
