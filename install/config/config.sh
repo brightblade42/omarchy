@@ -2,21 +2,7 @@
 
 # Copy over Omarchy configs
 mkdir -p ~/.config
-
-# FEDARCHY: Use rsync for robust config copying that handles dangling symlinks
-# rsync is better than cp for this because it properly handles:
-# - Dangling symlinks (overwrites them)
-# - Existing files and directories
-# - Preserves permissions and timestamps
-echo "Deploying configuration files..."
-if command -v rsync >/dev/null 2>&1; then
-    # Use rsync for proper symlink handling - NO DELETE FLAGS
-    rsync -av ~/.local/share/omarchy/config/ ~/.config/
-else
-    # Fallback to cp with dangling symlink cleanup
-    find ~/.config -type l ! -exec test -e {} \; -delete 2>/dev/null || true
-    cp -R ~/.local/share/omarchy/config/* ~/.config/
-fi
+cp -R ~/.local/share/omarchy/config/* ~/.config/
 
 # Use default bashrc from Omarchy
 cp ~/.local/share/omarchy/default/bashrc ~/.bashrc
