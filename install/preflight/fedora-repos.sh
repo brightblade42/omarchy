@@ -94,8 +94,25 @@ setup_aur_container() {
 
         echo "AUR container setup complete!"
     else
-        echo "AUR container already exists, updating..."
-        distrobox enter arch-aur -- yay -Syu --noconfirm
+        echo "AUR container already exists, checking if properly initialized..."
+
+        # Check if yay is installed in the container
+        if distrobox enter arch-aur -- which yay >/dev/null 2>&1; then
+            echo "Container is properly initialized, updating..."
+            distrobox enter arch-aur -- yay -Syu --noconfirm
+        else
+            echo "Container exists but yay not found - reinitializing..."
+
+            # Remove the incomplete container and recreate it
+            distrobox rm arch-aur --force 2>/dev/null || true
+
+            # Wait a moment for cleanup
+            sleep 2
+
+            # Recursively call ourselves to recreate the container
+            setup_aur_container
+            return
+        fi
     fi
 }
 
@@ -112,6 +129,7 @@ AUR_CONTAINER="arch-aur"
 case "$1" in
     install)
         shift
+        failed_packages=()
         for package in "$@"; do
             echo "Installing $package from AUR..."
 
@@ -184,9 +202,21 @@ case "$1" in
                 fi
             else
                 echo "✗ Failed to install $package"
-                exit 1
+                failed_packages+=("$package")
             fi
         done
+
+        # Report any failures at the end
+        if [ ${#failed_packages[@]} -gt 0 ]; then
+            echo ""
+            echo "⚠️  Some packages failed to install:"
+            for pkg in "${failed_packages[@]}"; do
+                echo "  • $pkg"
+            done
+            echo ""
+            echo "Installation continued with remaining packages."
+            echo "You can retry failed packages individually with: aur install <package>"
+        fi
         ;;
     remove)
         shift
