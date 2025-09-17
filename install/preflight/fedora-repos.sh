@@ -81,16 +81,14 @@ setup_aur_container() {
             # Update system first
             sudo pacman -Syu --noconfirm
 
-            # Install base-devel and git (required for building yay)
+            # Install base-devel and git (required for AUR packages)
             sudo pacman -S --needed --noconfirm base-devel git
 
-            # Install yay
-            cd /tmp
-            git clone https://aur.archlinux.org/yay.git
-            cd yay
-            makepkg -si --noconfirm
-            cd ~
-            rm -rf /tmp/yay
+            # Install yay using prebuilt binary (much faster than building)
+            curl -Ls https://github.com/Jguer/yay/releases/latest/download/yay_linux_amd64.tar.gz | tar xz -C /tmp/
+            sudo install -Dm755 /tmp/yay_linux_amd64/yay /usr/local/bin/yay
+            sudo ln -sf /usr/local/bin/yay /usr/bin/yay
+            rm -rf /tmp/yay_linux_amd64
 
             # Verify yay was installed correctly
             which yay && yay --version
@@ -118,9 +116,37 @@ setup_aur_container() {
             # Wait a moment for cleanup
             sleep 2
 
-            # Recursively call ourselves to recreate the container
-            setup_aur_container
-            return
+            # Recreate container inline (no recursion)
+            echo "Creating fresh container..."
+            if ! distrobox create --name arch-aur --image archlinux:latest --yes; then
+                echo "ERROR: Failed to create container even after cleanup"
+                exit 1
+            fi
+
+            # Wait for container to be ready
+            echo "Waiting for container to initialize..."
+            sleep 3
+
+            # Install yay using prebuilt binary (faster than building)
+            echo "Initializing container and installing yay..."
+            if ! distrobox enter arch-aur -- bash -c "
+                sudo pacman -Syu --noconfirm
+                sudo pacman -S --needed --noconfirm base-devel git
+
+                # Install yay binary directly (much faster than building)
+                curl -Ls https://github.com/Jguer/yay/releases/latest/download/yay_linux_amd64.tar.gz | tar xz -C /tmp/
+                sudo install -Dm755 /tmp/yay_linux_amd64/yay /usr/local/bin/yay
+                sudo ln -sf /usr/local/bin/yay /usr/bin/yay
+                rm -rf /tmp/yay_linux_amd64
+
+                which yay && yay --version
+            "; then
+                echo "✗ Failed to initialize container properly"
+                distrobox rm arch-aur --force 2>/dev/null || true
+                exit 1
+            fi
+
+            echo "✓ Container recreated and yay installed!"
         fi
     fi
 }

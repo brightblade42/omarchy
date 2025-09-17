@@ -48,7 +48,7 @@ source $OMARCHY_INSTALL/preflight/first-run-mode.sh
 source $OMARCHY_INSTALL/packages.sh
 source $OMARCHY_INSTALL/packaging/fonts.sh
 source $OMARCHY_INSTALL/packaging/lazyvim.sh
-source $OMARCHY_INSTALL/packaging/doom-emacs.sh
+#source $OMARCHY_INSTALL/packaging/doom-emacs.sh
 source $OMARCHY_INSTALL/packaging/webapps.sh
 source $OMARCHY_INSTALL/packaging/tuis.sh
 
